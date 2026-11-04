@@ -7,18 +7,41 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
 
-from jumia_tracker import JumiaDatabase, JumiaScraper, analyze_prices
+from jumia_tracker import JumiaCloudScraper, JumiaCookieScraper, JumiaDatabase, JumiaScraper, JumiaSeleniumScraper, analyze_prices
 
 
 def scrape(args):
     """Run scraper."""
-    scraper = JumiaScraper(save_to_db=not args.no_db)
     max_pages = args.max_pages if args.max_pages >= 0 else None
-    print(f"Starting scraper (max pages per category: {max_pages or 'all'})")
+    use_selenium = getattr(args, 'selenium', False)
+    use_cookies = getattr(args, 'cookies', False)
+    use_cloud = getattr(args, 'cloudscraper', False) and not use_selenium and not use_cookies
+    
+    if use_cookies:
+        print("Starting Cookie-based scraper...")
+        scraper = JumiaCookieScraper(cookies_file=getattr(args, 'cookies_file', 'cookies.json'), save_to_db=not args.no_db)
+    elif use_selenium:
+        print("Starting Selenium scraper (handles anti-bot protection)...")
+        scraper = JumiaSeleniumScraper(save_to_db=not args.no_db, headless=not getattr(args, 'no_headless', False))
+    elif use_cloud:
+        print("Starting CloudScraper (bypasses Cloudflare)...")
+        try:
+            scraper = JumiaCloudScraper(save_to_db=not args.no_db)
+        except Exception as e:
+            print(f"CloudScraper failed: {e}")
+            print("Falling back to Selenium...")
+            scraper = JumiaSeleniumScraper(save_to_db=not args.no_db, headless=not getattr(args, 'no_headless', False))
+    else:
+        print("Starting requests scraper...")
+        scraper = JumiaScraper(save_to_db=not args.no_db)
+    
+    print(f"Max pages per category: {max_pages or 'all'}")
     print(f"Saving to: CSV, JSON, and {'SQLite DB' if not args.no_db else 'NO DB'}")
-    df = scraper.scrape_all_categories(max_pages_per_category=max_pages)
-    print(f"\nScraped {len(df)} products total")
-    scraper.close()
+    try:
+        df = scraper.scrape_all_categories(max_pages_per_category=max_pages)
+        print(f"\nScraped {len(df)} products total")
+    finally:
+        scraper.close()
 
 
 def analyze(args):
@@ -60,7 +83,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py scrape --max-pages 1              # Test scrape (1 page per category)
+  python main.py scrape --max-pages 1              # Test scrape
+  python main.py scrape --cookies --max-pages 1   # Use saved cookies (if Cloudflare blocks)
+  python main.py scrape --selenium --max-pages 1  # Use Selenium
   python main.py scrape                            # Scrape all pages for today
   python main.py scrape --max-pages 2             # Scrape 2 pages per category
   python main.py scrape --no-db                   # Scrape without saving to database
@@ -79,6 +104,16 @@ Examples:
                                help='Max pages per category (default: 1 for testing, use -1 for all)')
     scrape_parser.add_argument('--no-db', action='store_true',
                                help='Do not save to SQLite database')
+    scrape_parser.add_argument('--selenium', action='store_true',
+                               help='Use Selenium browser (for sites with anti-bot protection)')
+    scrape_parser.add_argument('--cloudscraper', action='store_true',
+                               help='Use CloudScraper (bypasses Cloudflare)')
+    scrape_parser.add_argument('--cookies', action='store_true',
+                               help='Use saved cookies from cookies.json')
+    scrape_parser.add_argument('--cookies-file', default='cookies.json',
+                               help='Path to cookies JSON file')
+    scrape_parser.add_argument('--no-headless', action='store_true',
+                               help='Show browser window when using Selenium')
     
     # Analyze command
     analyze_parser = subparsers.add_parser('analyze', help='Analyze price history')

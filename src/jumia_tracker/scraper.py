@@ -262,4 +262,3 @@ class JumiaScraper:
         """Close database connection."""
         if self.db:
             self.db.close()
-```

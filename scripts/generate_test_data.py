@@ -31,3 +31,4 @@ def generate_test_data(output_path: str = "data/raw/test_price_history.csv"):
 
 if __name__ == "__main__":
     generate_test_data()
+

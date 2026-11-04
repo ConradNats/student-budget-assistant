@@ -7,8 +7,15 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
-from jumia_tracker import JumiaScraper
-from jumia_tracker import config
+try:
+    from jumia_tracker import JumiaScraper
+    from jumia_tracker import config
+except ImportError:
+    try:
+        from JumiaTracker import JumiaScraper
+        from JumiaTracker import config
+    except ImportError:
+        raise
 
 
 def main():
@@ -19,7 +26,6 @@ def main():
     scraper = JumiaScraper()
     
     # For testing, limit to 1 page per category to avoid long runs
-    # Set max_pages_per_category=None to scrape all pages
     max_pages = int(os.environ.get('MAX_PAGES', '1'))
     
     print(f"Scraping with max {max_pages} page(s) per category")

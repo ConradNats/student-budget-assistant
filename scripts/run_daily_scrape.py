@@ -7,7 +7,13 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
-from jumia_tracker import JumiaScraper
+try:
+    from jumia_tracker import JumiaScraper
+except ImportError:
+    try:
+        from JumiaTracker import JumiaScraper
+    except ImportError:
+        raise
 
 
 def main():
@@ -16,8 +22,6 @@ def main():
     
     scraper = JumiaScraper(save_to_db=True)
     
-    # Scrape more pages for better coverage over time
-    # Adjust max_pages based on your needs and rate limits
     max_pages = int(os.environ.get('MAX_PAGES_PER_CATEGORY', '3'))
     
     print(f"Scraping up to {max_pages} pages per category")

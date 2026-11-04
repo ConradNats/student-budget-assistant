@@ -6,7 +6,13 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
-from jumia_tracker import analyze_prices
+try:
+    from jumia_tracker import analyze_prices
+except ImportError:
+    try:
+        from JumiaTracker import analyze_prices
+    except ImportError:
+        raise
 
 
 def main():
